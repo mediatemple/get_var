@@ -13,18 +13,18 @@ use Test::More;
 use File::Slurp;
 
 # Make sure we are in the 'test' directory.
-chdir( dirname( abs_path( $0 ) ) );
+chdir( dirname( abs_path($0) ) );
 
 # We put our temp dirs at the begining of our module path so that we
 # decrease the risk of leaving cruft behind...
 my @modulepath = (
-    tempdir( getcwd() . "/pathXXXX", CLEANUP => 1 ) ,
-    tempdir( getcwd() . "/pathXXXX", CLEANUP => 1 ) ,
+    tempdir( getcwd() . "/pathXXXX", CLEANUP => 1 ),
+    tempdir( getcwd() . "/pathXXXX", CLEANUP => 1 ),
     abs_path( getcwd() . "/../../" ),
     abs_path( getcwd() ),
 );
 
-if ( ! scalar( @ARGV ) or shift ne '-y' ) {
+if ( !scalar(@ARGV) or shift ne '-y' ) {
     print <<WARNING;
 ===========================================================================
 This will mess with /etc/puppet/secret and /etc/puppet/var_dev!!
@@ -246,7 +246,7 @@ file { "/tmp/get_var-dev4.txt":
 PUPPET
 
         my $contents = read_file('/tmp/get_var-dev4.txt');
-        is( $contents, 'key3|key1|key2', $t );
+        is( $contents, 'key1|key2|key3', $t );
     },
     {   count => 2,
         code  => sub {
@@ -281,10 +281,7 @@ $foo = get_var("test_module", "noexist")
 PUPPET
 
             is( $rc, 1, $t );
-            ok( $output
-                    =~ /Unable to find var for noexist in module test_module/,
-                "$t - error"
-            );
+            ok( $output =~ /Unable to find var for noexist in module test_module/, "$t - error" );
             }
     },
     {   count => 2,
@@ -300,10 +297,8 @@ $foo = get_var("test_module", "noexist.foo.bar")
 PUPPET
 
             is( $rc, 1, $t );
-            ok( $output
-                    =~ /Unable to find var for noexist.foo.bar in module test_module/,
-                "$t - error"
-            );
+            ok( $output =~ /Unable to find var for noexist.foo.bar in module test_module/,
+                "$t - error" );
             }
     },
     {   count => 2,
@@ -455,42 +450,42 @@ PUPPET
     },
     {   count => 8,
         code  => sub {
-            my $t = 'precedence follows modulepath order';
+            my $t      = 'precedence follows modulepath order';
             my $module = "test_module_test";
 
             set_environment('production');
 
-            foreach ( @modulepath ) {
-                my $dir = $_;
+            foreach (@modulepath) {
+                my $dir        = $_;
                 my $module_dir = $dir . "/" . $module;
 
                 # Create the top level dir if needed and them the module dir
                 # and finally our var dir.
-                mkdir( $module_dir ) or die( $! );
-                mkdir( "$module_dir/var" ) or die ( $! );
-                
+                mkdir($module_dir) or die($!);
+                mkdir("$module_dir/var") or die($!);
+
                 # Create our var yaml file.
                 `echo "path: $dir" > "$module_dir/var/main.yml"`;
             }
 
-            foreach ( @modulepath ) {
-                my $dir = $_;
+            foreach (@modulepath) {
+                my $dir        = $_;
                 my $module_dir = $dir . "/" . $module;
 
                 my ( $rc, $output ) = run_puppet(<<PUPPET);
-\$path = get_var( "$module", "path")
-notice("### found value in \$path ###")
+\$test_path = get_var( "$module", "path")
+notice("### found value in \$test_path ###")
 PUPPET
 
                 is( $rc, 0, $t );
                 ok( $output =~ /### found value in $dir ###/, "$t - $dir" );
-                
+
                 # Cleanup our mess.
-                unlink( "$module_dir/var/main.yml" ) or dir( $! );
-                rmdir( "$module_dir/var" );
-                rmdir( $module_dir );
+                unlink("$module_dir/var/main.yml") or die($!);
+                rmdir("$module_dir/var");
+                rmdir($module_dir);
             }
-        }
+            }
     },
 );
 

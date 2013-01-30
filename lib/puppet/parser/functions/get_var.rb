@@ -34,8 +34,8 @@ Puppet::Parser::Functions::newfunction(:get_var, :type => :rvalue) do |vals|
     path = 'main'
   end
 
-  # check /etc/puppet/master.yml to see what environment we're in
-  environment = get_var_find_environment()
+  # check $confdir/master.yml to see what environment we're in
+  environment = get_var_find_environment
 
   if environment == 'production'
     var_path = 'var'
@@ -44,17 +44,22 @@ Puppet::Parser::Functions::newfunction(:get_var, :type => :rvalue) do |vals|
   end
 
   # look for the module in each directory in modulepath
-  paths = Puppet::Module.modulepath(Puppet[:environment]).map do |dir|
-    "#{dir}/#{modulename}/#{var_path}/#{path}.yml"
-  end
-  if environment == 'development'
-    paths.unshift("/etc/puppet/var_dev/#{modulename}/#{path}.yml")
+  paths = []
+  Puppet::Node::Environment.new(Puppet::Node::Environment.current).modulepath.each do |dir|
+    paths.push("#{dir}/#{modulename}/#{var_path}/#{path}.yml")
+    paths.push("#{dir}/#{modulename}/#{var_path}/#{path}.yaml")
   end
 
-  values = paths.map do |module_secret_file|
-    # and see if it has a secret.yml file
-    if File.exists?(module_secret_file)
-      get_var_get_value(module_secret_file, modulename, key)
+  if environment == 'development'
+    paths.unshift(File.join(Puppet[:confdir], 'var_dev', modulename, "#{path}.yml"))
+    paths.unshift(File.join(Puppet[:confdir], 'var_dev', modulename, "#{path}.yaml"))
+  end
+
+  values = paths.map do |yaml_file|
+    begin
+      get_var_get_value(yaml_file, modulename, key) if File.exists?(yaml_file)
+    rescue
+      next
     end
   end
 
@@ -62,18 +67,21 @@ Puppet::Parser::Functions::newfunction(:get_var, :type => :rvalue) do |vals|
   values = values.select { |val| !val.nil? }
 
   # pull the first if there are any values left
-  return values[0] if !values.empty?
-  
+  if !values.empty?
+    return values[0]
+  end
+
   if !default
     raise Puppet::ParseError, "Unable to find var for #{identifier} in module #{modulename}"
   else
+    debug("get_var: Unable to find var for #{identifier} in module #{modulename}; using default.")
     return default
   end
 end
 
-# these functions are used here and in get_secret.rb
+# these functions are used here and in get_var.rb
 def get_var_find_environment ()
-  conf_file = '/etc/puppet/master.yml'
+  conf_file = File.join(Puppet[:confdir], 'master.yml')
   if (File.exists?(conf_file))
     conf = YAML.load_file(conf_file)
     if (conf['environment'])
@@ -85,22 +93,23 @@ def get_var_find_environment ()
 end
 
 def get_var_get_value (yaml_file, modulename, identifier)
-    if File.exists?(yaml_file)
-      begin
-        value = get_var_drill_down(YAML.load_file(yaml_file), identifier.split(/\./))
-        if value
-          return value
-        else
-          return nil
-        end
-      rescue Puppet::ParseError => e
-        raise e
-      rescue Exception => e
-        raise Puppet::ParseError, "Unable to parse yml file for module #{modulename}, tried #{yaml_file}: #{e}"
+
+  if File.exists?(yaml_file)
+    begin
+      value = get_var_drill_down(YAML.load_file(yaml_file), identifier.split(/\./))
+      if value
+        return value
+      else
+        return nil
       end
-    else
-      return nil
+    rescue Puppet::ParseError => e
+      raise e
+    rescue Exception => e
+      raise Puppet::ParseError, "Unable to parse yml file for module #{modulename}, tried #{yaml_file}: #{e}"
     end
+  else
+    return nil
+  end
 end
 
 # Look for keys containing .'s first, then fall back.
@@ -123,7 +132,7 @@ def get_var_drill_down (data, ids)
 
   if (ids.length <= 0)
     if (id == 'keys')
-      return data.keys
+      return data.keys.sort
     else
       return nil unless data.has_key?(id)
       return data[id]
@@ -132,4 +141,3 @@ def get_var_drill_down (data, ids)
     get_var_drill_down(data[id], ids)
   end
 end
-

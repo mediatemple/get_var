@@ -34,57 +34,45 @@ Puppet::Parser::Functions::newfunction(:get_secret, :type => :rvalue) do |vals|
     path = 'main'
   end
 
-  # check /etc/puppet/master.yml to see what environment we're in
-  environment = get_secret_find_environment()
+  # check $confdir/master.yml to see what environment we're in
+  environment = get_secret_find_environment
 
   if environment == 'production'
-    secret_directory = '/etc/puppet/secret'
-    if (File.directory?(secret_directory))
-      yaml_file = "#{secret_directory}/#{modulename}/#{path}.yml"
-      value = get_secret_get_value(yaml_file, modulename, key)
-
-      if value
-        return value
-      elsif default
-        return default
-      else
-        raise Puppet::ParseError, "Unable to find secret value for module #{modulename} and key #{identifier}, tried #{yaml_file}"
-      end
-    else
-      raise Puppet::ParseError, "puppet is in production mode, but production secrets (#{secret_directory}) aren't found"
-    end
+    paths = [
+    File.join(Puppet[:confdir], 'secret', modulename, "#{path}.yml"),
+    File.join(Puppet[:confdir], 'secret', modulename, "#{path}.yaml"),
+    ]
   else
-    # look for the module in each directory in modulepath
-    values = Puppet::Module.modulepath(Puppet[:environment]).map do |dir|
-      # and see if it has a secret.yml file
-      module_secret_file = "#{dir}/#{modulename}/secret_dev/#{path}.yml"
-      if File.exists?(module_secret_file)
-        get_secret_get_value(module_secret_file, modulename, key)
-      end
+    paths = []
+    Puppet::Node::Environment.new(Puppet::Node::Environment.current).modulepath.each do |dir|
+      paths.push("#{dir}/#{modulename}/secret_dev/#{path}.yml")
+      paths.push("#{dir}/#{modulename}/secret_dev/#{path}.yaml")
     end
-
-    # filter out nil values
-    values = values.select { |val| !val.nil? }
-
-    # pull the first if there are any values left
-    return values[0] if !values.empty?
   end
-  
-  if !default
-    if environment == 'production'
-      report_path = yaml_file
-    else
-      report_path = "secret_dev/#{path}.yml"
+
+  values = paths.map do |yaml_file|
+    begin
+      get_secret_get_value(yaml_file, modulename, key) if File.exists?(yaml_file)
+    rescue
+      next
     end
-    raise Puppet::ParseError, "Unable to find secret value for module #{modulename} and key #{identifier}, tried #{report_path}"
+  end
+
+  values = values.select { |val| !val.nil? }
+
+  return values[0] if !values.empty?
+
+  if !default
+    raise Puppet::ParseError, "Unable to find secret value for module #{modulename} and key #{identifier}, tried #{paths.join(',')}"
   else
+    debug("get_secret: Unable to find secret for #{identifier} in module #{modulename}; using default.")
     return default
   end
 end
 
 # these functions are used here and in get_var.rb
 def get_secret_find_environment ()
-  conf_file = '/etc/puppet/master.yml'
+  conf_file = File.join(Puppet[:confdir], 'master.yml')
   if (File.exists?(conf_file))
     conf = YAML.load_file(conf_file)
     if (conf['environment'])
@@ -133,7 +121,7 @@ def get_secret_drill_down (data, ids)
 
   if (ids.length <= 0)
     if (id == 'keys')
-      return data.keys
+      return data.keys.sort
     else
       return nil unless data.has_key?(id)
       return data[id]

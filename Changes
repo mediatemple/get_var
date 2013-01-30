@@ -1,3 +1,12 @@
+v0.3.0 2013-01-30 12:44 (UTC)
+
+    * Do not hard code config directory.
+    * Support .yaml or .yml files.
+    * Spew a debug message when using default values.
+    * Fix modulepath lookup for Puppet >= 2.7
+    * Raise ParseError if the YAML files are not valid.
+    * Sort keys before returning from get_var('foo', 'foo:keys')
+
 v0.2.0 2011-05-18 17:28 (UTC)
 
     * allow domain names in key for get_secret - Nate Jones (f91a576)

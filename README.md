@@ -50,7 +50,9 @@ If the look up key doesn't have a colon (':'), then the YAML file is main.yml.  
 
     get_var('module', 'foo')
 
-will look for the 'foo' key in the `module/*var*/main.yml` file in production and the `module/*var_dev*/main.yml` file in development.
+will look for the 'foo' key in the `module/*var*/main.yml` file in
+production and the `module/*var_dev*/main.yml` file in development.
+Additionally, get_var will search for a *.yaml* extension as well.
 
 If the key does have a colon, the part before the colon is treated as a filename.  It can contain slashes to add heirarchy to the data.  For example, the following lookup:
 

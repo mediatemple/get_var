@@ -228,7 +228,7 @@ file { "/tmp/get_var-dev3.txt":
 PUPPET
 
         my $contents = read_file('/tmp/get_var-dev3.txt');
-        is( $contents, 'domain.com|domain2|hash|3key|domain|multikey|key', $t );
+        is( $contents, '3key|domain|domain.com|domain2|falsekey|hash|key|multikey', $t );
     },
     sub {
         my $t = 'keys';
@@ -486,6 +486,127 @@ PUPPET
                 rmdir($module_dir);
             }
             }
+    },
+    { 
+        # BEGIN get_var return false from yaml (no default)
+        count => 2,
+        code  => sub {
+            my $t = 'get_var return false from yaml (no default)';
+
+            set_environment();
+
+            my ( $rc, $output ) = run_puppet(<<'PUPPET');
+$foo = get_var("test_module", "falsekey")
+file { "/tmp/get_var-dev1.txt":
+    content => inline_template( '<%= foo %>' )
+}
+PUPPET
+            is( $rc, 0, $t );
+            my $contents = read_file('/tmp/get_var-dev1.txt');
+            is( $contents, 'false', $t );
+        },
+        # END get_var return false from yaml (no default)
+    },
+    { 
+        # BEGIN get_var return false from yaml (true default)
+        count => 2,
+        code  => sub {
+            my $t = 'get_var return false from yaml (true default)';
+
+            set_environment();
+
+            my ( $rc, $output ) = run_puppet(<<'PUPPET');
+$foo = get_var("test_module", "falsekey", true)
+file { "/tmp/get_var-dev1.txt":
+    content => inline_template( '<%= foo %>' )
+}
+PUPPET
+            is( $rc, 0, $t );
+            my $contents = read_file('/tmp/get_var-dev1.txt');
+            is( $contents, 'false', $t );
+        },
+        # END get_var return false from yaml (true default)
+    },
+    { 
+        # BEGIN get_var return false from default (not found in yaml)
+        count => 2,
+        code  => sub {
+            my $t = 'get_var return false from default (not found in yaml)';
+
+            set_environment();
+
+            my ( $rc, $output ) = run_puppet(<<'PUPPET');
+$foo = get_var("test_module", "nonexistent", false)
+file { "/tmp/get_var-dev1.txt":
+    content => inline_template( '<%= foo %>' )
+}
+PUPPET
+            is( $rc, 0, $t );
+            my $contents = read_file('/tmp/get_var-dev1.txt');
+            is( $contents, 'false', $t );
+        },
+        # END get_var return false from default (not found in yaml)
+    },
+
+    { 
+        # BEGIN get_secret return false from yaml (no default)
+        count => 2,
+        code  => sub {
+            my $t = 'get_secret return false from yaml (no default)';
+
+            set_environment();
+
+            my ( $rc, $output ) = run_puppet(<<'PUPPET');
+$foo = get_secret("test_module", "falsekey")
+file { "/tmp/get_var-dev1.txt":
+    content => inline_template( '<%= foo %>' )
+}
+PUPPET
+            is( $rc, 0, $t );
+            my $contents = read_file('/tmp/get_var-dev1.txt');
+            is( $contents, 'false', $t );
+        },
+        # END get_secret return false from yaml (no default)
+    },
+    { 
+        # BEGIN get_secret return false from yaml (true default)
+        count => 2,
+        code  => sub {
+            my $t = 'get_secret return false from yaml (true default)';
+
+            set_environment();
+
+            my ( $rc, $output ) = run_puppet(<<'PUPPET');
+$foo = get_var("test_module", "falsekey", true)
+file { "/tmp/get_var-dev1.txt":
+    content => inline_template( '<%= foo %>' )
+}
+PUPPET
+            is( $rc, 0, $t );
+            my $contents = read_file('/tmp/get_var-dev1.txt');
+            is( $contents, 'false', $t );
+        },
+        # END get_secret return false from yaml (true default)
+    },
+    { 
+        # BEGIN get_secret return false from default (not found in yaml)
+        count => 2,
+        code  => sub {
+            my $t = 'get_secret return false from default (not found in yaml)';
+
+            set_environment();
+
+            my ( $rc, $output ) = run_puppet(<<'PUPPET');
+$foo = get_var("test_module", "nonexistent", false)
+file { "/tmp/get_var-dev1.txt":
+    content => inline_template( '<%= foo %>' )
+}
+PUPPET
+            is( $rc, 0, $t );
+            my $contents = read_file('/tmp/get_var-dev1.txt');
+            is( $contents, 'false', $t );
+        },
+        # END get_secret return false from default (not found in yaml)
     },
 );
 

@@ -19,9 +19,13 @@
 # THE SOFTWARE.
 #
 Puppet::Parser::Functions::newfunction(:get_secret, :type => :rvalue) do |vals|
-  modulename = vals[0]
-  identifier = vals[1]
-  default    = vals[2]
+  modulename, identifier, default = vals
+
+  # Make sure we know how many args were passed.
+  argc = vals.length
+  if( argc < 2 or argc > 3 )
+    raise Puppet::ParseError, "get_var requires 2 or 3 arguments, you provided #{argc}."
+  end
 
   # identifier can be a path and key delimited by a colon
   # the default path is 'main'.  examples:
@@ -35,7 +39,8 @@ Puppet::Parser::Functions::newfunction(:get_secret, :type => :rvalue) do |vals|
   end
 
   # check $confdir/master.yml to see what environment we're in
-  environment = get_secret_find_environment
+  Puppet::Parser::Functions.function('get_var_environment')
+  environment = function_get_var_environment()
 
   if environment == 'production'
     paths = [
@@ -50,19 +55,23 @@ Puppet::Parser::Functions::newfunction(:get_secret, :type => :rvalue) do |vals|
     end
   end
 
-  values = paths.map do |yaml_file|
+  values, found_key = GETSECRET_NOTFOUND
+  paths.map do |yaml_file|
     begin
-      get_secret_get_value(yaml_file, modulename, key) if File.exists?(yaml_file)
+      values, found_key = get_secret_get_value(yaml_file, modulename, key) if File.exists?(yaml_file)
+      if found_key
+        break
+      end
     rescue
       next
     end
   end
 
-  values = values.select { |val| !val.nil? }
+  if found_key
+    return values
+  end
 
-  return values[0] if !values.empty?
-
-  if !default
+  if argc < 3
     raise Puppet::ParseError, "Unable to find secret value for module #{modulename} and key #{identifier}, tried #{paths.join(',')}"
   else
     debug("get_secret: Unable to find secret for #{identifier} in module #{modulename}; using default.")
@@ -70,40 +79,28 @@ Puppet::Parser::Functions::newfunction(:get_secret, :type => :rvalue) do |vals|
   end
 end
 
-# these functions are used here and in get_var.rb
-def get_secret_find_environment ()
-  conf_file = File.join(Puppet[:confdir], 'master.yml')
-  if (File.exists?(conf_file))
-    conf = YAML.load_file(conf_file)
-    if (conf['environment'])
-      return conf['environment']
-    end
-  end
-
-  return 'development'
-end
+GETSECRET_NOTFOUND = [ nil, false ]
 
 def get_secret_get_value (yaml_file, modulename, identifier)
-    if File.exists?(yaml_file)
-      begin
-        value = get_secret_drill_down(YAML.load_file(yaml_file), identifier.split(/\./))
-        if value
-          return value
-        else
-          return nil
-        end
-      rescue Puppet::ParseError => e
-        raise e
-      rescue Exception => e
-        raise Puppet::ParseError, "Unable to parse secret yml file for module #{modulename}, tried #{yaml_file}: #{e}"
-      end
-    else
-      return nil
+  if File.exists?(yaml_file)
+    begin
+      return get_secret_drill_down(YAML.load_file(yaml_file), identifier.split(/\./))
+    rescue Puppet::ParseError => e
+      raise e
+    rescue Exception => e
+      raise Puppet::ParseError, "Unable to parse secret yml file for module #{modulename}, tried #{yaml_file}: #{e}"
     end
+  else
+    return GETSECRET_NOTFOUND
+  end
 end
 
+# Look for keys containing .'s first, then fall back. Returns a 2 element
+# array where the first element is the derived value and the second element
+# is true or false indicating if the value was found.  This allows as to
+# distinguish between "not found" and "found, but false".
 def get_secret_drill_down (data, ids)
-  return nil unless data && ids.length > 0
+  return GETSECRET_NOTFOUND unless data && ids.length > 0
 
   id = ""
   (ids.length - 1).downto(0) do |i|
@@ -121,12 +118,15 @@ def get_secret_drill_down (data, ids)
 
   if (ids.length <= 0)
     if (id == 'keys')
-      return data.keys.sort
+      return [ data.keys.sort, true ]
     else
-      return nil unless data.has_key?(id)
-      return data[id]
+      if( data.has_key?(id) and data[id] != nil )
+        return [ data[id], true ]
+      else
+        return GETSECRET_NOTFOUND
+      end
     end
   else
-    get_secret_drill_down(data[id], ids)
+    return get_secret_drill_down(data[id], ids)
   end
 end

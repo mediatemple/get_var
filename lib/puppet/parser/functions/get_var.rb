@@ -125,7 +125,7 @@ def get_var_drill_down (data, ids)
     if (id == 'keys')
       return [ data.keys.sort, true ]
     else
-      if( data.has_key?(id) )
+      if( data.has_key?(id) and data[id] != nil )
         return [ data[id], true ]
       else
         return GETVAR_NOTFOUND

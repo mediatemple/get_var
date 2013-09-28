@@ -24,3 +24,4 @@ domain2:
   com:
     key: heirarchical_key
 falsekey: false
+nilkey:

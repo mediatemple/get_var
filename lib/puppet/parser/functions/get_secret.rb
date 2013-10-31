@@ -40,7 +40,7 @@ Puppet::Parser::Functions::newfunction(:get_secret, :type => :rvalue) do |vals|
 
   # check $confdir/master.yml to see what environment we're in
   Puppet::Parser::Functions.function('get_var_environment')
-  environment = function_get_var_environment()
+  environment = function_get_var_environment([])
 
   if environment == 'production'
     paths = [

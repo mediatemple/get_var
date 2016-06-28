@@ -1,3 +1,1 @@
-class test_module {
-
-}
+class test_module { }

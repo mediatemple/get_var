@@ -1,3 +1,1 @@
-class get_var {
-
-}
+class get_var { }

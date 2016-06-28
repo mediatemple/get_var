@@ -23,7 +23,7 @@ Puppet::Parser::Functions::newfunction(:get_var, :type => :rvalue) do |vals|
 
   # Make sure we know how many args were passed.
   argc = vals.length
-  if( argc < 2 or argc > 3 )
+  if argc < 2 or argc > 3
     raise Puppet::ParseError, "get_var requires 2 or 3 arguments, you provided #{argc}."
   end
 
@@ -67,8 +67,6 @@ Puppet::Parser::Functions::newfunction(:get_var, :type => :rvalue) do |vals|
       if found_key
         break
       end
-    rescue
-      next
     end
   end
 
@@ -84,7 +82,7 @@ Puppet::Parser::Functions::newfunction(:get_var, :type => :rvalue) do |vals|
   end
 end
 
-GETVAR_NOTFOUND = [ nil, false ]
+GETVAR_NOTFOUND = [nil, false]
 
 def get_var_get_value (yaml_file, modulename, identifier)
   if File.exists?(yaml_file)
@@ -107,9 +105,9 @@ end
 def get_var_drill_down (data, ids)
   return GETVAR_NOTFOUND unless data && ids.length > 0
 
-  id = ""
+  id = ''
   (ids.length - 1).downto(0) do |i|
-    id = ids[0..i].join(".");
+    id = ids[0..i].join('.')
 
     if data.has_key?(id) || i == 0
       if i < ids.length - 1
@@ -121,12 +119,12 @@ def get_var_drill_down (data, ids)
     end
   end
 
-  if (ids.length <= 0)
-    if (id == 'keys')
-      return [ data.keys.sort, true ]
+  if ids.length <= 0
+    if id == 'keys'
+      return [data.keys.sort, true]
     else
-      if( data.has_key?(id) and data[id] != nil )
-        return [ data[id], true ]
+      if data.has_key?(id) and data[id] != nil
+        return [data[id], true]
       else
         return GETVAR_NOTFOUND
       end

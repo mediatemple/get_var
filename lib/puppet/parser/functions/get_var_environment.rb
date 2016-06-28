@@ -19,15 +19,14 @@
 # THE SOFTWARE.
 #
 Puppet::Parser::Functions::newfunction(:get_var_environment, :type => :rvalue) do
-    result = 'development'
-    conf_file = File.join(Puppet[:confdir], 'master.yml')
-    if (File.exists?(conf_file))
-        conf = YAML.load_file(conf_file)
-        if (conf['environment'])
-            result = conf['environment']
-        end
+  result = 'development'
+  conf_file = File.join(Puppet[:confdir], 'master.yml')
+  if File.exists?(conf_file)
+    conf = YAML.load_file(conf_file)
+    if conf['environment']
+      result = conf['environment']
     end
+  end
 
-    return result
+  return result
 end
-

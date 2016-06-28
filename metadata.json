@@ -1,0 +1,14 @@
+{
+  "name": "mt-get_var",
+  "version": "0.3.0",
+  "author": "mediatemple",
+  "summary": "Puppet functions to keep production and development separate.",
+  "license": "mit",
+  "source": "https://github.com/mediatemple/get_var",
+  "dependencies": [
+    {
+      "name": "puppetlabs-stdlib",
+      "version_requirement": ">= 1.0.0"
+    }
+  ]
+}

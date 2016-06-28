@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 #
-Puppet::Parser::Functions::newfunction(:get_var_environment, :type => :rvalue) do
+Puppet::Parser::Functions::newfunction(:get_var_environment, :type => :rvalue) do |vals|
   result = 'development'
   conf_file = File.join(Puppet[:confdir], 'master.yml')
   if File.exists?(conf_file)
